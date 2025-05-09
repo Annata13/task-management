@@ -2,61 +2,75 @@ package school.sorokin.task_management;
 
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class TaskService {
-    private final Map<Long, Task> tasks = Map.of(
-            1L, new Task(
-                    1L,
-                    1L,
-                    1L,
-                    TaskStatus.IN_PROGRESS,
-                    LocalDateTime.now(),
-                    LocalDateTime.now().plusDays(2),
-                    TaskPriority.HIGH
-            ),
-            2L, new Task(
-                    2L,
-                    2L,
-                    22L,
-                    TaskStatus.CREATED,
-                    LocalDateTime.now(),
-                    LocalDateTime.now().plusDays(6),
-                    TaskPriority.LOW
-            ),
-            3L, new Task(
-                    3L,
-                    3L,
-                    1L,
-                    TaskStatus.IN_PROGRESS,
-                    LocalDateTime.now(),
-                    LocalDateTime.now().plusDays(1),
-                    TaskPriority.MEDIUM
-            ),
-            4L, new Task(
-                    4L,
-                    4L,
-                    2L,
-                    TaskStatus.IN_PROGRESS,
-                    LocalDateTime.now(),
-                    LocalDateTime.now().plusDays(8),
-                    TaskPriority.HIGH
-            )
-    );
+    private final Map<Long, Task> taskMap;
+    private final AtomicLong idCounter;
+
+    public TaskService() {
+        taskMap = new HashMap<Long, Task>();
+        idCounter = new AtomicLong();
+    }
 
     public Task getTaskById(Long id) {
-        if (!tasks.containsKey(id)) {
+        if (!taskMap.containsKey(id)) {
             throw new NoSuchElementException("Not found reservation by id = " + id);
         }
-        return tasks.get(id);
+        return taskMap.get(id);
     }
 
     public List<Task> getAllTasks() {
-        return new ArrayList<>(tasks.values());
+        return taskMap.values().stream().toList();
+    }
+
+    public Task createdTask(Task taskToCreate) {
+        if (taskToCreate.id() != null) {
+            throw new IllegalArgumentException("Id should be empty");
+        }
+        if (taskToCreate.status() != null) {
+            throw new IllegalArgumentException("Id status be empty");
+        }
+        var newTask = new Task(
+                idCounter.incrementAndGet(),
+                taskToCreate.createId(),
+                taskToCreate.assignedUserId(),
+                TaskStatus.CREATED,
+                taskToCreate.createDateTime(),
+                taskToCreate.deadlineDate(),
+                TaskPriority.MEDIUM
+        );
+        taskMap.put(newTask.id(), newTask);
+        return newTask;
+    }
+
+    public Task updateTask(Long id, Task taskToUpdate) {
+        if (!taskMap.containsKey(id)) {
+            throw new NoSuchElementException("Not found task by id = " + id);
+        }
+        var task = taskMap.get(id);
+        if (task.status() == task.status().DONE) {
+            throw new IllegalStateException("Cannot modify task: status= " + task.status());
+        }
+        var updateTask = new Task(
+                task.id(),
+                taskToUpdate.createId(),
+                taskToUpdate.assignedUserId(),
+                taskToUpdate.status(),
+                taskToUpdate.createDateTime(),
+                taskToUpdate.deadlineDate(),
+                taskToUpdate.priority()
+        );
+        taskMap.put(task.id(), updateTask);
+        return updateTask;
+    }
+
+    public void deleteTask(Long id) {
+        if (!taskMap.containsKey(id)) {
+            throw new NoSuchElementException("Not found task by id = " + id);
+        }
+        taskMap.remove(id);
     }
 }

@@ -2,13 +2,15 @@ package school.sorokin.task_management;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestController
+@RequestMapping("/tasks")
 public class TaskController {
     public static final Logger log = LoggerFactory.getLogger(TaskController.class);
 
@@ -19,18 +21,56 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-    public Task getTaskById(@PathVariable Long id) {
-        log.info("Start  getTaskById: id={}", id);
-        Task task = taskService.getTaskById(id);
-        log.info("End getTaskById: id={}", id);
-        return task;
+    public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
+        log.info("Called  getTaskById: id={}", id);
+        try {
+            return ResponseEntity.ok(taskService.getTaskById(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping()
-    public List<Task> getTasks() {
-        log.info("Start getTask");
-        List<Task> task = taskService.getAllTasks();
-        log.info("End  getTask");
-        return task;
+    public ResponseEntity<List<Task>> getAllTasks() {
+        log.info("Called getAllTasks");
+        return ResponseEntity.ok(taskService.getAllTasks());
+    }
+
+    @PostMapping()
+    public ResponseEntity<Task> createTask(@RequestBody Task taskToCreate) {
+        log.info("Called createTask");
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(taskService.createdTask(taskToCreate));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Task> updateTask(
+            @PathVariable("id") Long id,
+            @RequestBody Task taskToUpdate) {
+        log.info("Called  updateTask: id={}, taskToUpdate={}", id, taskToUpdate);
+        try {
+            var updated = taskService.updateTask(id, taskToUpdate);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Task> deleteTask(@PathVariable("id") Long id) {
+        log.info("Called  deleteTask: id={}", id);
+        try {
+            taskService.deleteTask(id);
+            return ResponseEntity.ok().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
