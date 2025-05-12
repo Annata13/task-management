@@ -1,5 +1,6 @@
 package school.sorokin.task_management;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -7,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/tasks")
@@ -25,7 +25,7 @@ public class TaskController {
         log.info("Called  getTaskById: id={}", id);
         try {
             return ResponseEntity.ok(taskService.getTaskById(id));
-        } catch (NoSuchElementException e) {
+        } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
     }
@@ -58,7 +58,7 @@ public class TaskController {
             return ResponseEntity.ok(updated);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().build();
-        } catch (NoSuchElementException e) {
+        } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
     }
@@ -69,7 +69,20 @@ public class TaskController {
         try {
             taskService.deleteTask(id);
             return ResponseEntity.ok().build();
-        } catch (NoSuchElementException e) {
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{id}/start")
+    public ResponseEntity<Task> updateStatusTask(@PathVariable("id") Long id) {
+        log.info("Called  startTask: id={}", id);
+        try {
+            var updated = taskService.updateStatusTask(id);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
     }

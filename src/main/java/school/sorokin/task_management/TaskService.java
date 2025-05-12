@@ -1,29 +1,41 @@
 package school.sorokin.task_management;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class TaskService {
-    private final Map<Long, Task> taskMap;
-    private final AtomicLong idCounter;
+    private final TaskRepository repository;
 
-    public TaskService() {
-        taskMap = new HashMap<Long, Task>();
-        idCounter = new AtomicLong();
+    public TaskService(TaskRepository taskRepository) {
+        this.repository = taskRepository;
+    }
+
+    private Task toDomainTask(TaskEntity taskEntity) {
+        return new Task(
+                taskEntity.getId(),
+                taskEntity.getCreateId(),
+                taskEntity.getAssignedUserId(),
+                taskEntity.getStatus(),
+                taskEntity.getCreateDateTime(),
+                taskEntity.getDeadlineDate(),
+                taskEntity.getPriority()
+        );
     }
 
     public Task getTaskById(Long id) {
-        if (!taskMap.containsKey(id)) {
-            throw new NoSuchElementException("Not found reservation by id = " + id);
-        }
-        return taskMap.get(id);
+        TaskEntity find = repository.findById(id).orElseThrow(() ->
+                new EntityNotFoundException("Not found reservation by id = " + id));
+        return toDomainTask(find);
     }
 
     public List<Task> getAllTasks() {
-        return taskMap.values().stream().toList();
+        List<TaskEntity> allEntity = repository.findAll();
+        return allEntity.stream()
+                .map(this::toDomainTask)
+                .toList();
     }
 
     public Task createdTask(Task taskToCreate) {
@@ -33,8 +45,8 @@ public class TaskService {
         if (taskToCreate.status() != null) {
             throw new IllegalArgumentException("Id status be empty");
         }
-        var newTask = new Task(
-                idCounter.incrementAndGet(),
+        var newTask = new TaskEntity(
+                null,
                 taskToCreate.createId(),
                 taskToCreate.assignedUserId(),
                 TaskStatus.CREATED,
@@ -42,35 +54,51 @@ public class TaskService {
                 taskToCreate.deadlineDate(),
                 TaskPriority.MEDIUM
         );
-        taskMap.put(newTask.id(), newTask);
-        return newTask;
+        repository.save(newTask);
+        return toDomainTask(newTask);
     }
 
     public Task updateTask(Long id, Task taskToUpdate) {
-        if (!taskMap.containsKey(id)) {
-            throw new NoSuchElementException("Not found task by id = " + id);
+        TaskEntity find = repository.findById(id).orElseThrow(() ->
+                new EntityNotFoundException("Not found reservation by id = " + id));
+
+        if (find.getStatus() == TaskStatus.DONE) {
+            throw new IllegalStateException("Cannot modify task: status= " + find.getStatus());
         }
-        var task = taskMap.get(id);
-        if (task.status() == task.status().DONE) {
-            throw new IllegalStateException("Cannot modify task: status= " + task.status());
-        }
-        var updateTask = new Task(
-                task.id(),
+        var updateTask = new TaskEntity(
+                find.getId(),
                 taskToUpdate.createId(),
                 taskToUpdate.assignedUserId(),
-                taskToUpdate.status(),
+                TaskStatus.IN_PROGRESS,
                 taskToUpdate.createDateTime(),
                 taskToUpdate.deadlineDate(),
                 taskToUpdate.priority()
         );
-        taskMap.put(task.id(), updateTask);
-        return updateTask;
+
+        return toDomainTask(updateTask);
     }
 
     public void deleteTask(Long id) {
-        if (!taskMap.containsKey(id)) {
-            throw new NoSuchElementException("Not found task by id = " + id);
+        if (!repository.existsById(id)) {
+            throw new EntityNotFoundException("Not found reservation by id = " + id);
         }
-        taskMap.remove(id);
+        repository.deleteById(id);
+    }
+
+    public Task updateStatusTask(Long id) {
+        var taskEntity = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Not found reservation by id = " + id));
+
+        if (taskEntity.getAssignedUserId() == null) {
+            throw new EntityNotFoundException("Not found assigned user by id" + taskEntity.getStatus());
+        }
+        if (repository.countActiveTasksByUser(taskEntity.getAssignedUserId()) > 4) {
+            throw new IllegalStateException("Maximum active tasks limit (5) exceeded for user"
+            );
+        }
+
+        taskEntity.setStatus(TaskStatus.IN_PROGRESS);
+        repository.save(taskEntity);
+        return toDomainTask(taskEntity);
     }
 }
