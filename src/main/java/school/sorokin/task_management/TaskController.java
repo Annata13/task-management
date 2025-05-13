@@ -1,6 +1,6 @@
 package school.sorokin.task_management;
 
-import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -23,11 +23,7 @@ public class TaskController {
     @GetMapping("/{id}")
     public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
         log.info("Called  getTaskById: id={}", id);
-        try {
-            return ResponseEntity.ok(taskService.getTaskById(id));
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(taskService.getTaskById(id));
     }
 
     @GetMapping()
@@ -37,53 +33,39 @@ public class TaskController {
     }
 
     @PostMapping()
-    public ResponseEntity<Task> createTask(@RequestBody Task taskToCreate) {
+    public ResponseEntity<Task> createTask(@RequestBody @Valid Task taskToCreate) {
         log.info("Called createTask");
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(taskService.createdTask(taskToCreate));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST).build();
-        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(taskService.createdTask(taskToCreate));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Task> updateTask(
             @PathVariable("id") Long id,
-            @RequestBody Task taskToUpdate) {
+            @RequestBody @Valid Task taskToUpdate) {
         log.info("Called  updateTask: id={}, taskToUpdate={}", id, taskToUpdate);
-        try {
-            var updated = taskService.updateTask(id, taskToUpdate);
-            return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        var updated = taskService.updateTask(id, taskToUpdate);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Task> deleteTask(@PathVariable("id") Long id) {
         log.info("Called  deleteTask: id={}", id);
-        try {
-            taskService.deleteTask(id);
-            return ResponseEntity.ok().build();
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        taskService.deleteTask(id);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/start")
     public ResponseEntity<Task> updateStatusTask(@PathVariable("id") Long id) {
         log.info("Called  startTask: id={}", id);
-        try {
-            var updated = taskService.updateStatusTask(id);
-            return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        var updated = taskService.updateStatusTask(id);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<Task> updateStatusDoneTask(@PathVariable("id") Long id) {
+        log.info("Called  updateStatusDoneTask: id={}", id);
+        var updated = taskService.updateStatusDoneTask(id);
+        return ResponseEntity.ok(updated);
     }
 }

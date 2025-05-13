@@ -3,6 +3,7 @@ package school.sorokin.task_management;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -21,7 +22,8 @@ public class TaskService {
                 taskEntity.getStatus(),
                 taskEntity.getCreateDateTime(),
                 taskEntity.getDeadlineDate(),
-                taskEntity.getPriority()
+                taskEntity.getPriority(),
+                taskEntity.getDoneDateTime()
         );
     }
 
@@ -39,12 +41,14 @@ public class TaskService {
     }
 
     public Task createdTask(Task taskToCreate) {
-        if (taskToCreate.id() != null) {
-            throw new IllegalArgumentException("Id should be empty");
-        }
+
         if (taskToCreate.status() != null) {
             throw new IllegalArgumentException("Id status be empty");
         }
+        if (!taskToCreate.deadlineDate().isAfter(taskToCreate.createDateTime())) {
+            throw new IllegalArgumentException("The start date must be earlier than the end date.");
+        }
+
         var newTask = new TaskEntity(
                 null,
                 taskToCreate.createId(),
@@ -52,7 +56,8 @@ public class TaskService {
                 TaskStatus.CREATED,
                 taskToCreate.createDateTime(),
                 taskToCreate.deadlineDate(),
-                TaskPriority.MEDIUM
+                taskToCreate.priority(),
+                null
         );
         repository.save(newTask);
         return toDomainTask(newTask);
@@ -62,17 +67,18 @@ public class TaskService {
         TaskEntity find = repository.findById(id).orElseThrow(() ->
                 new EntityNotFoundException("Not found reservation by id = " + id));
 
-        if (find.getStatus() == TaskStatus.DONE) {
+        if (find.getStatus() == TaskStatus.DONE && taskToUpdate.status() != TaskStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot modify task: status= " + find.getStatus());
         }
         var updateTask = new TaskEntity(
                 find.getId(),
                 taskToUpdate.createId(),
                 taskToUpdate.assignedUserId(),
-                TaskStatus.IN_PROGRESS,
+                taskToUpdate.status(),
                 taskToUpdate.createDateTime(),
                 taskToUpdate.deadlineDate(),
-                taskToUpdate.priority()
+                taskToUpdate.priority(),
+                null
         );
 
         return toDomainTask(updateTask);
@@ -98,6 +104,24 @@ public class TaskService {
         }
 
         taskEntity.setStatus(TaskStatus.IN_PROGRESS);
+        repository.save(taskEntity);
+        return toDomainTask(taskEntity);
+    }
+
+    public Task updateStatusDoneTask(Long id) {
+        var taskEntity = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Not found reservation by id = " + id));
+
+        if (taskEntity.getAssignedUserId() == null) {
+            throw new EntityNotFoundException("Not found assigned user by id" + taskEntity.getStatus());
+        }
+        if (taskEntity.getAssignedUserId() == null) {
+            throw new IllegalArgumentException("No date has been set before which the task must be completed."
+            );
+        }
+
+        taskEntity.setStatus(TaskStatus.DONE);
+        taskEntity.setDoneDateTime(LocalDateTime.now());
         repository.save(taskEntity);
         return toDomainTask(taskEntity);
     }
