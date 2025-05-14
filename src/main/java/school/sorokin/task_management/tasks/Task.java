@@ -1,4 +1,4 @@
-package school.sorokin.task_management;
+package school.sorokin.task_management.tasks;
 
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;

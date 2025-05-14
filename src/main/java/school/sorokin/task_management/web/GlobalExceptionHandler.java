@@ -1,4 +1,4 @@
-package school.sorokin.task_management;
+package school.sorokin.task_management.web;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
