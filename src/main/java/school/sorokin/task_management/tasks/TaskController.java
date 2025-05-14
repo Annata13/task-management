@@ -1,4 +1,4 @@
-package school.sorokin.task_management;
+package school.sorokin.task_management.tasks;
 
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -27,9 +27,16 @@ public class TaskController {
     }
 
     @GetMapping()
-    public ResponseEntity<List<Task>> getAllTasks() {
-        log.info("Called getAllTasks");
-        return ResponseEntity.ok(taskService.getAllTasks());
+    public ResponseEntity<List<Task>> searchAllByFilter(@RequestParam(name = "createId", required = false) Long createId,
+                                                        @RequestParam(name = "assignedUserId", required = false) Long assignedUserId,
+                                                        @RequestParam(name = "status", required = false) TaskStatus status,
+                                                        @RequestParam(name = "priority", required = false) TaskPriority priority,
+                                                        @RequestParam(name = "pageSize", required = false) Integer pageSize,
+                                                        @RequestParam(name = "pageNumber", required = false) Integer pageNumber
+    ) {
+        log.info("searchAllByFilter");
+        var filter = new TaskSearchFilter(createId, assignedUserId, status, priority, pageSize, pageNumber);
+        return ResponseEntity.ok(taskService.searchAllByFilter(filter));
     }
 
     @PostMapping()

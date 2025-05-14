@@ -1,4 +1,4 @@
-package school.sorokin.task_management;
+package school.sorokin.task_management.tasks;
 
 import jakarta.persistence.*;
 
@@ -32,6 +32,8 @@ public class TaskEntity {
     @Column(name = "priority")
     private TaskPriority priority;          // низкий, средний, высокий
 
+    private LocalDateTime doneDateTime;
+
     public LocalDateTime getDoneDateTime() {
         return doneDateTime;
     }
@@ -40,7 +42,6 @@ public class TaskEntity {
         this.doneDateTime = doneDateTime;
     }
 
-    private LocalDateTime doneDateTime;
 
     public TaskEntity() {
     }
